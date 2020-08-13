@@ -120,6 +120,68 @@ async function Google() {
                     .catch(error => {
                         alert(error.message);
                     });
+            })
+            .catch(function (error) {
+
+                console.log(":: ~> 02");
+                console.log(error);
+
+                // Handle Errors here.
+                var errorCode = error.code;
+                var errorMessage = error.message;
+                // The email of the user's account used.
+                var email = error.email;
+                // The firebase.auth.AuthCredential type that was used.
+                var credential = error.credential;
+                // ...
+            });
+    } catch (e) {
+
+        console.log(":: ~> 03");
+
+        console.log(e);
+    }
+}
+
+function facebook() {
+    try {
+
+        console.log("Facebook Method::");
+
+        firebase
+            .auth()
+            .signInWithPopup(new firebase.auth.FacebookAuthProvider())
+            .then(async function (result) {
+
+                console.log(":: ~> 01");
+
+                // This gives you a Google Access Token. You can use it to access the Google API.
+                var token = result.credential.accessToken;
+                // The signed-in user info.
+                var user = result.user;
+
+                console.log(user);
+
+                var usr = {
+                    uid: user.uid,
+                    email: user.email,
+                    isAdmin: false,
+                    verified: true
+                };
+
+                await firebase
+                    .database()
+                    .ref("users/" + usr.uid)
+                    .update(usr)
+                    .then(async x => {
+                        window.open("/my-profile", "_self").focus();
+                        //clearJoinUI();
+                        //logout();
+                        //alert("Profile Created - Please verify your account.");
+                    })
+                    .catch(error => {
+                        alert(error.message);
+                    });
 
             })
             .catch(function (error) {
@@ -177,13 +239,21 @@ $(function () {
 
     $("#join_createButton_G").click(function () {
         Google();
-
         return false;
     });
 
     $("#login_loginButton_G").click(function () {
         Google();
+        return false;
+    });
 
+    $("#join_createButton_FB").click(function () {
+        facebook();
+        return false;
+    });
+
+    $("#login_loginButton_FB").click(function () {
+        facebook();
         return false;
     });
 
@@ -194,6 +264,8 @@ $(function () {
         xFrame = snap.val().xFrameTag;
     });
 });
+
+
 
 function sendEmail(userid, email) {
     loader.show();

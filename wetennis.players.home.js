@@ -48,6 +48,9 @@ $(function () {
 
     //Filter: Location
     $('#filter_location').keyup(function (e) {
+
+        //console.log($('#filter_location').val());
+
         if (e.keyCode == 13) {
             filter_Location = $('#filter_location').val();
             syncFilters();
@@ -67,6 +70,13 @@ $(function () {
     //Filter: Ability 
     $(".filter-ability").click(function () {
         filter_Ability = $($(this).html()).html();
+
+        $(".filter-ability").removeClass("highlight");
+        $(this).addClass("highlight");
+
+        if (filter_Ability.toLowerCase() === "all")
+            filter_Ability = "";
+
         syncFilters();
         filterCollection(playerList);
     });
@@ -92,6 +102,13 @@ $(function () {
     //Filter: Gender 
     $(".filter-gender").click(function () {
         filter_Gender = $($(this).html()).html();
+
+        $(".filter-gender").removeClass("highlight");
+        $(this).addClass("highlight");
+
+        if (filter_Gender.toLowerCase() === "all")
+            filter_Gender = "";
+
         syncFilters();
         filterCollection(playerList);
     });
