@@ -1,0 +1,51 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>JS Bin</title>
+    <script src="https://openui5.hana.ondemand.com/resources/sap-ui-core.js" id="sap-ui-bootstrap" data-sap-ui-theme="sap_bluecrystal" data-sap-ui-libs="sap.m"></script>
+</head>
+<body id="body">
+
+
+    <script>
+
+        var model = new sap.ui.model.json.JSONModel({
+            name: "Roland van Eeden"
+        });
+
+        new sap.m.Input({ value: "{/name}", valueLiveUpdate: true }).setModel(model).placeAt("body");
+
+        new sap.m.Button({
+            icon: { path: "/name", formatter: generateAvatar },
+            text: "Hello"
+        }).setModel(model).placeAt("body");
+
+
+        function generateAvatar(name) {
+            var initials = name.split(' ').map(function (str) { return str ? str[0].toUpperCase() : ""; }).join('');
+            var canvas = document.createElement('canvas');
+            var radius = 60;
+            var margin = 15;
+            canvas.width = radius * 2 + margin * 2;
+            canvas.height = radius * 2 + margin * 2;
+
+            // Get the drawing context
+            var ctx = canvas.getContext('2d');
+            ctx.beginPath();
+            ctx.arc(radius + margin, radius + margin, radius, 0, 2 * Math.PI, false);
+            ctx.closePath();
+            ctx.fillStyle = 'grey';
+            ctx.fill();
+            ctx.fillStyle = "white";
+            ctx.font = "bold 30px Arial";
+            ctx.textAlign = 'center';
+            ctx.fillText(initials, radius + 5, radius * 4 / 3 + margin);
+            return canvas.toDataURL();
+
+        }
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+
+    <style>
+
+        #profileImage {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: #512DA8;
+            font-size: 35px;
+            color: #fff;
+            text-align: center;
+            line-height: 150px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+
+
+    <span id="firstName">Kalpesh</span>
+    <span id="lastName">Singh</span>
+    <div id="profileImage"></div>
+
+    <a href="#" class="button w-button clicked" data-slide="design">learn more</a>
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+
+    <script>
+
+        $(document).ready(function () {
+            var firstName = $('#firstName').text();
+            var lastName = $('#lastName').text();
+            var intials = $('#firstName').text().charAt(0) + $('#lastName').text().charAt(0);
+            var profileImage = $('#profileImage').text(intials);
+        });
+
+
+        $(document).ready(function () {
+
+            // Clear cookies
+            $.cookie('slideNumber', null);
+
+            $(".clicked").each(function () {
+                $(this).click(function () {
+                    var slide = $(this).attr("data-slide");
+                    console.log("Slide ~> " + slide);
+                    $.cookie('slideNumber', slide);
+                    window.open("/service", "_self").focus();
+                });
+            });
+
+
+        });
+
+        function addCookie(slide) {
+
+        }
+
+
+
+
+
+
+        $.cookie('slideNumber', null);
+
+
+
+    </script>
+</body>
+</html>

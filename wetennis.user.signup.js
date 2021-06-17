@@ -4,6 +4,9 @@ var loader = $("#customLoader");
 var endpoint;
 var xFrame;
 
+var encr_salt = null;
+var encr_salt2 = null;
+
 async function logout() {
     await firebase
         .auth()
@@ -13,6 +16,19 @@ async function logout() {
 }
 
 async function login() {
+
+    if (!loginFormIsValid()) {
+        showErrorMessage("Please fill in all the fields.");
+        return false;
+    }
+
+    if (!isEmail($("#login_email").val())) {
+        showErrorMessage("Please fill in a valid email address.");
+        return false;
+    }
+
+    loader.show();
+
     await firebase
         .auth()
         .signInWithEmailAndPassword(
@@ -24,39 +40,62 @@ async function login() {
                 const dbRef = firebase.database().ref();
                 const userRef = dbRef.child("users/" + firebase.auth().currentUser.uid);
                 userRef.on("value", snap => {
-                    if (snap.val().verified) {
+
+                    if (snap.val().isDisabled) {
+                        logout();
+                        showErrorMessage("Account disabled by admin.");
+                        loader.hide();
+                    }
+                    else if (snap.val().verified) {
                         window.open("/my-profile", "_self").focus();
                     } else {
                         logout();
-                        $(".error-bar").slideDown('slow').delay(3500).slideUp('slow');
-                        $("#errorTextMessage").html("Please verify your account first.");
-                        //alert("Please verify your account first.");
-
+                        showErrorMessage("Please verify your account first.");
+                        loader.hide();
                     }
                 });
             }
         })
         .catch(function (error) {
-            alert(error.message);
+            showErrorMessage(error.message);
+            loader.hide();
         });
 }
 
 async function createProfile() {
-    console.log("::01 ~> Enter createProfile method");
+
+    if (!joinFormIsValid()) {
+
+        showErrorMessage("Please fill in all the fields.");
+        return false;
+    }
+
+    if (!isEmail($("#join_email").val())) {
+        showErrorMessage("Please fill in a valid email address.");
+        return false;
+    }
+
+    if (!isValidPassword()) {
+        showErrorMessage("Password must have a minimum of 6 characters.");
+        return false;
+    }
+
     loader.show();
     try {
+
+        var u = $("#join_email").val();
+        var p = $("#join_password").val();
+
         const userAuth = await firebase
             .auth()
-            .createUserWithEmailAndPassword(
-                $("#join_email").val(),
-                $("#join_password").val()
-            );
+            .createUserWithEmailAndPassword(u, p);
 
         var user = {
             uid: userAuth.user.uid,
             email: userAuth.user.email,
             isAdmin: false,
-            verified: false
+            verified: false,
+            isDisabled: false
         };
 
         await firebase
@@ -64,47 +103,47 @@ async function createProfile() {
             .ref("users/" + user.uid)
             .set(user)
             .then(async x => {
-                console.log("::02 ~> Create profile");
-                clearJoinUI();
+                
                 logout();
+                var iv = CryptoJS.enc.Hex.parse(encr_salt2);
+                var encrypted = CryptoJS.AES.encrypt(
+                    user.uid + '|' + u + '|' + p,
+                    encr_salt,
+                    {
+                        iv: iv,
+                        mode: CryptoJS.mode.CBC,
+                        padding: CryptoJS.pad.Pkcs7
+                    }
+                );
 
-                $("html, body").animate({ scrollTop: 0 }, "fast");
-                sendEmail(user.uid, user.email);
+                sendEmail(user.email, encrypted.toString());
+                clearJoinUI();
             })
             .catch(error => {
-                console.log("::03 ~> Error in promis catch.");
-                alert(error.message);
+                showErrorMessage(error.message);
+                loader.hide();
             });
     } catch (e) {
-        //console.log("::04 ~> Error in try catch.");
-        //alert(e.message);
+        showErrorMessage(e.message);
+        loader.hide();
     }
 }
 
 async function Google() {
     try {
-
-        console.log("Google Method::");
-
         firebase
             .auth()
             .signInWithPopup(provider)
             .then(async function (result) {
-
-                console.log(":: ~> 01");
-
-                // This gives you a Google Access Token. You can use it to access the Google API.
                 var token = result.credential.accessToken;
-                // The signed-in user info.
                 var user = result.user;
-
-                console.log(user);
 
                 var usr = {
                     uid: user.uid,
                     email: user.email,
                     isAdmin: false,
-                    verified: true
+                    verified: true,
+                    isDisabled: false
                 };
 
                 await firebase
@@ -113,60 +152,37 @@ async function Google() {
                     .update(usr)
                     .then(async x => {
                         window.open("/my-profile", "_self").focus();
-                        //clearJoinUI();
-                        //logout();
-                        //alert("Profile Created - Please verify your account.");
                     })
                     .catch(error => {
-                        alert(error.message);
+                        showErrorMessage(error.message);
+                        loader.hide();
                     });
             })
             .catch(function (error) {
-
-                console.log(":: ~> 02");
-                console.log(error);
-
-                // Handle Errors here.
-                var errorCode = error.code;
-                var errorMessage = error.message;
-                // The email of the user's account used.
-                var email = error.email;
-                // The firebase.auth.AuthCredential type that was used.
-                var credential = error.credential;
-                // ...
+                showErrorMessage(error.message);
+                loader.hide();
             });
     } catch (e) {
-
-        console.log(":: ~> 03");
-
-        console.log(e);
+        showErrorMessage(e.message);
+        loader.hide();
     }
 }
 
 function facebook() {
     try {
-
-        console.log("Facebook Method::");
-
         firebase
             .auth()
             .signInWithPopup(new firebase.auth.FacebookAuthProvider())
             .then(async function (result) {
-
-                console.log(":: ~> 01");
-
-                // This gives you a Google Access Token. You can use it to access the Google API.
                 var token = result.credential.accessToken;
-                // The signed-in user info.
                 var user = result.user;
-
-                console.log(user);
 
                 var usr = {
                     uid: user.uid,
                     email: user.email,
                     isAdmin: false,
-                    verified: true
+                    verified: true,
+                    isDisabled: false
                 };
 
                 await firebase
@@ -175,34 +191,19 @@ function facebook() {
                     .update(usr)
                     .then(async x => {
                         window.open("/my-profile", "_self").focus();
-                        //clearJoinUI();
-                        //logout();
-                        //alert("Profile Created - Please verify your account.");
                     })
                     .catch(error => {
-                        alert(error.message);
+                        showErrorMessage(error.message);
+                        loader.hide();
                     });
-
             })
             .catch(function (error) {
-
-                console.log(":: ~> 02");
-                console.log(error);
-
-                // Handle Errors here.
-                var errorCode = error.code;
-                var errorMessage = error.message;
-                // The email of the user's account used.
-                var email = error.email;
-                // The firebase.auth.AuthCredential type that was used.
-                var credential = error.credential;
-                // ...
+                showErrorMessage(error.message);
+                loader.hide();
             });
     } catch (e) {
-
-        console.log(":: ~> 03");
-
-        console.log(e);
+        showErrorMessage(e.message);
+        loader.hide();
     }
 }
 
@@ -217,15 +218,26 @@ function clearLoginUI() {
 }
 
 $(function () {
-    //firebase.auth().signOut();
+
+    //var u = "roland@kreonovo.com";
+    //var p = "testerLester!@#$%^&*1233445566778";
+    //var salt = create_UUID();
+
+    //console.log("u= " + u);
+    //console.log("p= " + p);
+    //console.log("salt: " + salt);
 
 
-    $("#join_createButton").click(function () {
-        createProfile();
-        return false;
-    });
+    //// Encrypt
+    //var ciphertext = CryptoJS.AES.encrypt(u + '|' + p, salt);
 
+    //console.log("Encrypted Value: " + ciphertext);
 
+    //// Decrypt
+    //var bytes = CryptoJS.AES.decrypt(ciphertext.toString(), salt);
+    //var plaintext = bytes.toString(CryptoJS.enc.Utf8);
+
+    //console.log("Decrypted Value: " + plaintext);
 
     $("#join_createButton").click(function () {
         createProfile();
@@ -262,17 +274,17 @@ $(function () {
     clientRef.on("value", async snap => {
         endpoint = snap.val().base + snap.val().endpoint_genericMail;
         xFrame = snap.val().xFrameTag;
+        encr_salt = snap.val().salt;
+        encr_salt2 = snap.val().salt2;
     });
 });
 
-
-
-function sendEmail(userid, email) {
+function sendEmail(email, token) {
     loader.show();
 
     var body = {};
     body.title = "Please verify your account";
-    body.Content = window.location.origin + "/verify-account?v=" + userid;
+    body.Content = window.location.origin + "/verify-account?token=" + encodeURIComponent(token);
     body.ToEmailAddress = email;
 
     console.log(endpoint);
@@ -289,7 +301,9 @@ function sendEmail(userid, email) {
         success: function (data) {
             console.info(data);
 
-            alert("Profile Created - Please verify your account.");
+            $("#successTextMessage").html("Your profile has been created. Please check your email. Please check your spam box if you did not receive an email.");
+            $("#success-bar").slideDown('slow').delay(3500).slideUp('slow');
+
             loader.hide();
 
             return false;
@@ -299,4 +313,51 @@ function sendEmail(userid, email) {
         }
     });
     return false;
+}
+
+function loginFormIsValid() {
+    var u = $("#login_email").val();
+    var p = $("#login_password").val();
+
+    if (u && p)
+        return true;
+    return false;
+}
+
+function joinFormIsValid() {
+    var u = $("#join_email").val();
+    var p = $("#join_password").val();
+
+    if (u && p)
+        return true;
+    return false;
+}
+
+function showErrorMessage(msg) {
+    $("#errorTextMessage").html(msg);
+    $("#error-bar").slideDown('slow').delay(3500).slideUp('slow');
+}
+
+function showSuccessMessage(msg) {
+    $("#successTextMessage").html(msg);
+    $("#success-bar").slideDown('slow').delay(3500).slideUp('slow');
+}
+
+function isEmail(email) {
+    var regex = /^([a-zA-Z0-9_.+-])+\@(([a-zA-Z0-9-])+\.)+([a-zA-Z0-9]{2,4})+$/;
+    return regex.test(email);
+}
+
+function isValidPassword() {
+    return $("#join_password").val().length > 5;
+}
+
+function create_UUID() {
+    var dt = new Date().getTime();
+    var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = (dt + Math.random() * 16) % 16 | 0;
+        dt = Math.floor(dt / 16);
+        return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+    return uuid.split("-").join("");
 }
