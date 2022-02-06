@@ -5,7 +5,8 @@ var errorBar = $("#error-bar");
 
 let file = {};
 var hasFile;
-var defaultProfilePic = "https://uploads-ssl.webflow.com/5f1abf099448a85d4dad24b1/5f30aa01afd43077d5cf9c10_default.svg";
+var defaultProfilePic =
+    "https://uploads-ssl.webflow.com/5f1abf099448a85d4dad24b1/5f30aa01afd43077d5cf9c10_default.svg";
 
 async function logout() {
     await firebase
@@ -16,9 +17,7 @@ async function logout() {
 }
 
 async function saveProfile() {
-
-    if (!validateForm())
-        return;
+    if (!validateForm()) return;
 
     loader.show();
 
@@ -36,49 +35,52 @@ async function saveProfile() {
         facebook: $("#p_facebook").val(),
         twitter: $("#p_twitter").val(),
         instagram: $("#p_instagram").val(),
-        aboutMe: $("#p_aboutMe").val(),
+        aboutMe: $("#p_aboutMe").val()
     };
 
-    profile.shareLink = (profile.name + '-' + profile.surname).replace(/\s+/g, "-").toLowerCase().latinize();
+    profile.shareLink = (profile.name + "-" + profile.surname)
+        .replace(/\s+/g, "-")
+        .toLowerCase()
+        .latinize();
 
     try {
         await firebase
             .database()
             .ref("users/" + authUser.uid)
             .update(profile)
-            .then(async x => {
-
+            .then(async (x) => {
                 if (hasFile)
                     await firebase
                         .storage()
                         .ref("users")
                         .child(authUser.uid + "/profile.jpg")
-                        .put(file).then(async y => {
+                        .put(file)
+                        .then(async (y) => {
                             await firebase
                                 .storage()
                                 .ref("users")
                                 .child(authUser.uid + "/profile.jpg")
                                 .getDownloadURL()
-                                .then(async imgUrl => {
+                                .then(async (imgUrl) => {
                                     profile.profilePicURL = imgUrl;
                                     await firebase
                                         .database()
                                         .ref("users/" + authUser.uid)
                                         .update(profile)
-                                        .then(c => {
+                                        .then((c) => {
                                             console.log(y);
 
-                                            successBar.slideDown('slow').delay(3500).slideUp('slow');
+                                            successBar.slideDown("slow").delay(3500).slideUp("slow");
                                             initPage();
                                         });
-                                })
+                                });
                         });
                 else {
-                    successBar.slideDown('slow').delay(3500).slideUp('slow');
+                    successBar.slideDown("slow").delay(3500).slideUp("slow");
                     initPage();
                 }
             })
-            .catch(error => {
+            .catch((error) => {
                 console.log(error.message);
                 loader.hide();
                 //errorBar.slideDown();
@@ -91,7 +93,6 @@ async function saveProfile() {
 }
 
 function initPage() {
-
     $("#p_name").val(authUser.name);
     $("#p_surname").val(authUser.surname);
     $("#p_birthday").val(authUser.birthday);
@@ -121,11 +122,12 @@ function initPage() {
         .ref("users")
         .child(authUser.uid + "/profile.jpg")
         .getDownloadURL()
-        .then(imgUrl => {
+        .then((imgUrl) => {
             $("#p_profilePic").attr("src", imgUrl);
 
             loader.hide();
-        }).catch(e => {
+        })
+        .catch((e) => {
             console.log("No profile pic.");
             //$("#p_profilePic").attr("src", defaultProfilePic);
             //$("#p_avatar_letter").html($("#p_email").val().substring(1, 1));
@@ -140,19 +142,19 @@ $(document).ready(function () {
     hasFile = false;
 
     $("#nav_button").hide();
-    $("#p_email").prop('disabled', true);
+    $("#p_email").prop("disabled", true);
 
     $("#p_saveButton").click(function () {
         saveProfile();
         return false;
     });
 
-    console.log($.cookie('verified'));
+    console.log($.cookie("verified"));
 
-    if ($.cookie('verified') == "true") {
+    if ($.cookie("verified") == "true") {
         $.cookie("verified", false);
         $("#successTextMessage").html("Account verified successfully.");
-        $("#success-bar").slideDown('slow').delay(3500).slideUp('slow');
+        $("#success-bar").slideDown("slow").delay(3500).slideUp("slow");
     }
 
     fileUploader = document.getElementById("p_profilePicUpload");
@@ -166,10 +168,10 @@ $(document).ready(function () {
             console.log("File Size:" + sizeKB);
             $("#p_upload_file_text").html(file.name);
 
-            if (sizeKB > 350) {
+            if (sizeKB > 4000) {
                 $("#p_profilePicUpload").val(null);
                 file = {};
-                showError("Please select an image with a size less than 350kb.");
+                showError("Please select an image with a size less than 4 MB.");
             }
         }
     });
@@ -178,57 +180,57 @@ $(document).ready(function () {
 
     if (player) {
         const dbRef = firebase.database().ref();
-        dbRef.child('users').orderByChild('shareLink').equalTo(player).on('child_added', snap => {
-            if (snap.val().verified) {
-                authUser = snap.val();
-                initPage();
+        dbRef
+            .child("users")
+            .orderByChild("shareLink")
+            .equalTo(player)
+            .on("child_added", (snap) => {
+                if (snap.val().verified) {
+                    authUser = snap.val();
+                    initPage();
 
+                    firebase.auth().onAuthStateChanged((user) => {
+                        if (user) {
+                            const dbRef = firebase.database().ref();
+                            const userRef = dbRef.child("users/" + user.uid);
+                            userRef.on("value", (snap) => {
+                                console.log(snap.val());
+                                if (snap.val().isAdmin) {
+                                    $("#p_disableButton_wrapper").show();
 
-                firebase.auth().onAuthStateChanged(user => {
-                    if (user) {
-                        const dbRef = firebase.database().ref();
-                        const userRef = dbRef.child("users/" + user.uid);
-                        userRef.on("value", snap => {
-                            console.log(snap.val());
-                            if (snap.val().isAdmin) {
-                                $("#p_disableButton_wrapper").show();
+                                    $("#p_disableButton").click(async function () {
+                                        console.log("disable account");
 
-                                $("#p_disableButton").click(async function () {
+                                        authUser.isDisabled = true;
 
-                                    console.log("disable account");
+                                        await firebase
+                                            .database()
+                                            .ref("users/" + authUser.uid)
+                                            .update(authUser)
+                                            .then((x) => {
+                                                window.open("/", "_self").focus();
+                                            });
 
-                                    authUser.isDisabled = true;
-
-                                    await firebase
-                                        .database()
-                                        .ref("users/" + authUser.uid)
-                                        .update(authUser).then(x => {
-                                            window.open("/", "_self").focus();
-                                        });
-
-                                    return false;
-                                });
-                            }
-                        });
-                    } else {
-                        // nothing
-                    }
-                });
-
-            } else {
-                logout();
-                alert("Please verify your account first.");
-                window.open("/", "_self").focus();
-            }
-        });
-    }
-    else {
-        firebase.auth().onAuthStateChanged(user => {
+                                        return false;
+                                    });
+                                }
+                            });
+                        } else {
+                            // nothing
+                        }
+                    });
+                } else {
+                    logout();
+                    alert("Please verify your account first.");
+                    window.open("/", "_self").focus();
+                }
+            });
+    } else {
+        firebase.auth().onAuthStateChanged((user) => {
             if (user) {
                 const dbRef = firebase.database().ref();
                 const userRef = dbRef.child("users/" + user.uid);
-                userRef.on("value", snap => {
-
+                userRef.on("value", (snap) => {
                     if (snap.val().isDisabled) {
                         alert("Account disabled by admin.");
                         window.open("/", "_self").focus();
@@ -252,16 +254,14 @@ $(document).ready(function () {
     }
 });
 
-
 function showError(msg) {
     alert(msg);
 }
 
 function validateForm() {
-
     var name = $("#p_name").val();
     if (/\d/.test(name)) {
-        showErrorMessage("Name cannot contain numbers")
+        showErrorMessage("Name cannot contain numbers");
         return false;
     }
     if (!name) {
@@ -271,7 +271,7 @@ function validateForm() {
 
     var surname = $("#p_surname").val();
     if (/\d/.test(surname)) {
-        showErrorMessage("Surname cannot contain numbers")
+        showErrorMessage("Surname cannot contain numbers");
         return false;
     }
     if (!surname) {
@@ -312,19 +312,25 @@ function validateForm() {
 
     var fb = $("#p_facebook").val();
     if (fb && !isUrlValid(fb)) {
-        showErrorMessage("Please enter a valid Facebook link (eg. https://facebook.com/your-page-link) or leave the field empty");
+        showErrorMessage(
+            "Please enter a valid Facebook link (eg. https://facebook.com/your-page-link) or leave the field empty"
+        );
         return false;
     }
 
     var tw = $("#p_twitter").val();
     if (tw && !isUrlValid(tw)) {
-        showErrorMessage("Please enter a valid Twitter link (eg. https://twitter.com/your-page-link) or leave the field empty");
+        showErrorMessage(
+            "Please enter a valid Twitter link (eg. https://twitter.com/your-page-link) or leave the field empty"
+        );
         return false;
     }
 
     var inst = $("#p_instagram").val();
     if (inst && !isUrlValid(inst)) {
-        showErrorMessage("Please enter a valid Instagram link (eg. https://instagram.com/your-page-link) or leave the field empty");
+        showErrorMessage(
+            "Please enter a valid Instagram link (eg. https://instagram.com/your-page-link) or leave the field empty"
+        );
         return false;
     }
 
@@ -332,16 +338,17 @@ function validateForm() {
 }
 
 function isUrlValid(url) {
-    return /^(https?|s?ftp):\/\/(((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:)*@)?(((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5]))|((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?)(:\d*)?)(\/((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)?)?(\?((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|[\uE000-\uF8FF]|\/|\?)*)?(#((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|\/|\?)*)?$/i.test(url);
+    return /^(https?|s?ftp):\/\/(((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:)*@)?(((\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5])\.(\d|[1-9]\d|1\d\d|2[0-4]\d|25[0-5]))|((([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|\d|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.)+(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])*([a-z]|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])))\.?)(:\d*)?)(\/((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)+(\/(([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)*)*)?)?(\?((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|[\uE000-\uF8FF]|\/|\?)*)?(#((([a-z]|\d|-|\.|_|~|[\u00A0-\uD7FF\uF900-\uFDCF\uFDF0-\uFFEF])|(%[\da-f]{2})|[!\$&'\(\)\*\+,;=]|:|@)|\/|\?)*)?$/i.test(
+        url
+    );
 }
-
 
 function showErrorMessage(msg) {
     $("#errorTextMessage").html(msg);
-    $("#error-bar").slideDown('slow').delay(3500).slideUp('slow');
+    $("#error-bar").slideDown("slow").delay(3500).slideUp("slow");
 }
 
 function showSuccessMessage(msg) {
     $("#successTextMessage").html(msg);
-    $("#success-bar").slideDown('slow').delay(3500).slideUp('slow');
+    $("#success-bar").slideDown("slow").delay(3500).slideUp("slow");
 }

@@ -29,12 +29,9 @@ $(async function () {
 
     const dbRef = firebase.database().ref("users");
 
-
-    await firebase.auth().onAuthStateChanged(user => {
-        if (user)
-            authUserUID = user.uid;
+    await firebase.auth().onAuthStateChanged((user) => {
+        if (user) authUserUID = user.uid;
     });
-
 
     dbRef
         .once("value")
@@ -43,7 +40,7 @@ $(async function () {
                 let t = child.val();
 
                 if (!t.isDisabled && t.verified && t.name && t.uid != authUserUID) {
-                    t.age = calcAge(new Date(t.birthday));
+                    t.age = calcAge(t);
                     playerList.push(t);
                 }
             });
@@ -241,8 +238,7 @@ function renderTiles(collection, append) {
 
         $("#player_tile_wrapper").append(playerTile);
 
-        if (e.profilePicURL)
-            $("#" + e.uid).attr("src", e.profilePicURL);
+        if (e.profilePicURL) $("#" + e.uid).attr("src", e.profilePicURL);
         else {
             $("#" + e.uid).hide();
             var f = $.trim(e.name).substring(0, 1);
@@ -252,16 +248,13 @@ function renderTiles(collection, append) {
             //$("#" + e.uid + "_letter").html((($.trim(e.email)).substring(0, 1)).toUpperCase());
         }
 
-
-
-
         playerTile = "";
         //}
     });
 }
 
-function calcAge(date) {
-    return new Date().getFullYear() - date.getFullYear();
+function calcAge(t) {
+    return new Date().getFullYear() - ((moment(t.birthday, "DD/MM/YYYY")).toDate()).getFullYear();
 }
 
 function filterByName(collection) {
@@ -277,17 +270,17 @@ function SortByName(a, b) {
 
 function paginate(array, page_size, page_number) {
 
+    $("#loadMorePlayers").parent().show();
+
     var showing = page_size * page_number;
     var total = array.length;
 
-    if (total < showing)
-        showing = total;
+    if (total < showing) showing = total;
 
     $("#paginate-x").html(showing);
     $("#paginate-y").html(total);
 
-    if (total == showing)
-        $("#loadMorePlayers").parent().hide();
+    if (total == showing) $("#loadMorePlayers").parent().hide();
 
     // human-readable page numbers usually start with 1, so we reduce 1 in the first argument
     return array.slice((page_number - 1) * page_size, page_number * page_size);
